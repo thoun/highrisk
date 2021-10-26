@@ -13,8 +13,10 @@ declare const board: HTMLDivElement;
 class HighRisk implements HighRiskGame {
     private gamedatas: HighRiskGamedatas;
     private diceManager: DiceManager;
+    //private base: any;
 
-    constructor() {
+    constructor(private base: any) {
+        //setTimeout(() => this.base = this.base.bgagame.highrisk.prototype, 100);
     }
     
     /*
@@ -75,6 +77,9 @@ class HighRisk implements HighRiskGame {
             die.roll();
         });
         //</script>
+
+        //console.log(this.base.bgagame.highrisk.prototype.addTooltipHtml);
+        //setTimeout(() => this.base.bgagame.highrisk.prototype.addTooltipHtml('board', 'test'), 200);
 
         this.setupNotifications();
 
@@ -175,8 +180,8 @@ class HighRisk implements HighRiskGame {
 
     /* This enable to inject translatable styled things to logs or action bar */
     /* @Override */
-    /*public format_string_recursive(log: string, args: any) {
-        try {
+    public format_string_recursive(base: any, log: string, args: any) {
+        /*try {
             if (log && args && !args.processed) {
                 // Representation of the color of a card
                 if (args.card_name) {
@@ -202,7 +207,7 @@ class HighRisk implements HighRiskGame {
             }
         } catch (e) {
             console.error(log,args,"Exception thrown", e.stack);
-        }
-        return (this as any).inherited(arguments);
-    }*/
+        }*/
+        return base.inherited(base, arguments);
+    }
 }

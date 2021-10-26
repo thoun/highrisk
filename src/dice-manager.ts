@@ -1,10 +1,5 @@
-type DieClickAction = 'move' | 'change' | 'psychicProbeRoll';
-
 class DiceManager {
     private dice: Dice[] = [];
-    private dieFaceSelectors: DieFaceSelector[] = [];
-    private action: DieClickAction;
-    private changeDieArgs: EnteringChangeDieArgs;
 
     constructor(private game: HighRiskGame, setupDice: Dice[]) {
         // TODO use setupDice ?

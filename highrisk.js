@@ -45,7 +45,6 @@ class DiceManager {
     constructor(game, setupDice) {
         this.game = game;
         this.dice = [];
-        this.dieFaceSelectors = [];
         // TODO use setupDice ?
     }
     hideLock() {
@@ -496,7 +495,10 @@ const isDebug = window.location.host == 'studio.boardgamearena.com' || window.lo
 ;
 const log = isDebug ? console.log.bind(window.console) : function () { };
 class HighRisk {
-    constructor() {
+    //private base: any;
+    constructor(base) {
+        this.base = base;
+        //setTimeout(() => this.base = this.base.bgagame.highrisk.prototype, 100);
     }
     /*
         setup:
@@ -550,6 +552,8 @@ class HighRisk {
             die.roll();
         });
         //</script>
+        //console.log(this.base.bgagame.highrisk.prototype.addTooltipHtml);
+        //setTimeout(() => this.base.bgagame.highrisk.prototype.addTooltipHtml('board', 'test'), 200);
         this.setupNotifications();
         log("Ending game setup");
     }
@@ -628,6 +632,41 @@ class HighRisk {
             this.notifqueue.setSynchronous(notif[0], notif[1]);
         });
     }
+    /*notif_setInitialCards(notif: Notif<NotifSetInitialCardsArgs>) {
+        this.cards.addCardsToStock(this.visibleCards, notif.args.cards, 'deck');
+    }*/
+    /* This enable to inject translatable styled things to logs or action bar */
+    /* @Override */
+    format_string_recursive(base, log, args) {
+        /*try {
+            if (log && args && !args.processed) {
+                // Representation of the color of a card
+                if (args.card_name) {
+                    let types: number[] = null;
+                    if (typeof args.card_name == 'number') {
+                        types = [args.card_name];
+                    } else if (typeof args.card_name == 'string' && args.card_name[0] >= '0' && args.card_name[0] <= '9') {
+                        types = args.card_name.split(',').map((cardType: string) => Number(cardType));
+                    }
+                    if (types !== null) {
+                        const names: string[] = types.map((cardType: number) => this.cards.getCardName(cardType, 'text-only'));
+                        args.card_name = `<strong>${names.join(', ')}</strong>`;
+                    }
+                }
+
+                for (const property in args) {
+                    if (args[property]?.indexOf?.(']') > 0) {
+                        args[property] = formatTextIcons(_(args[property]));
+                    }
+                }
+
+                log = formatTextIcons(_(log));
+            }
+        } catch (e) {
+            console.error(log,args,"Exception thrown", e.stack);
+        }*/
+        return base.inherited(base, arguments);
+    }
 }
 define([
     "dojo", "dojo/_base/declare",
@@ -636,46 +675,12 @@ define([
     "ebg/stock"
 ], function (dojo, declare) {
     return declare("bgagame.highrisk", ebg.core.gamegui, {
-        game: new HighRisk(),
-        //...(new HighRisk()),
-        constructor: function () {
-            //this.game.constructor()
-        },
-        setup: function (gamedatas) {
-            this.game.setup(gamedatas);
-        },
-        ///////////////////////////////////////////////////
-        //// Game & client states
-        // onEnteringState: this method is called each time we are entering into a new game state.
-        //                  You can use this method to perform some user interface changes at this moment.
-        //
-        /*onEnteringState: function( stateName, args )
-        {
-            console.log( 'Entering state: '+stateName );
-        },*/
-        // onLeavingState: this method is called each time we are leaving a game state.
-        //                 You can use this method to perform some user interface changes at this moment.
-        //
-        onLeavingState: function (stateName) {
-            console.log('Leaving state: ' + stateName);
-        },
-        // onUpdateActionButtons: in this method you can manage "action buttons" that are displayed in the
-        //                        action status bar (ie: the HTML links in the status bar).
-        //        
-        onUpdateActionButtons: function (stateName, args) {
-            console.log('onUpdateActionButtons: ' + stateName);
-        },
-        setupNotifications: function () {
-            console.log('notifications subscriptions setup');
-            // TODO: here, associate your game notifications with local methods
-            // Example 1: standard notification handling
-            // dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
-            // Example 2: standard notification handling + tell the user interface to wait
-            //            during 3 seconds after calling the method in order to let the players
-            //            see what is happening in the game.
-            // dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
-            // this.notifqueue.setSynchronous( 'cardPlayed', 3000 );
-            // 
-        },
+        game: new HighRisk(this),
+        constructor: function () { },
+        setup: function (gamedatas) { return this.game.setup(gamedatas); },
+        onEnteringState: function (stateName, args) { return this.game.onEnteringState(stateName, args); },
+        onLeavingState: function (stateName) { return this.game.onLeavingState(stateName); },
+        onUpdateActionButtons: function (stateName, args) { return this.game.onUpdateActionButtons(stateName, args); },
+        //format_string_recursive: function(log, args) { return this.game.format_string_recursive(this, log, args); }, 
     });
 });
