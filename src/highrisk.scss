@@ -1,1 +1,20 @@
 @import 'dice';
+
+.meeple {
+    &[data-color="475b74"] { background-position: 0% 50%; }
+    &[data-color="0d5049"] { background-position: 33.33% 50%; }
+    &[data-color="bc8b2c"] { background-position: 66.66% 50%; }
+    &[data-color="70090a"] { background-position: 100% 50%; }
+}
+
+#table {
+    display: flex;
+    justify-content: center;
+
+    #board {
+        background: url("img/board.jpg");
+        background-size: 100%;
+        width: 500px;
+        height: 647px;
+    }
+}
