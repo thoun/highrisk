@@ -29,6 +29,9 @@ function (dojo, declare) {
             // Example:
             // this.myGlobalValue = 0;
 
+            /*const gameJsTag = Array.from(document.getElementsByTagName('script')).find(e => e.src && e.src.indexOf('highrisk.js') !== -1);
+            gameJsTag.type = 'module';
+            console.log(gameJsTag);*/
         },
         
         /*
@@ -57,6 +60,28 @@ function (dojo, declare) {
             }
             
             // TODO: Set up your game interface here, according to "gamedatas"
+
+            
+            //<!--   <script type="module" src="./die.mjs"></script>-->
+            //<script>
+            /*import { Die } from './die.mjs';
+            
+            const die = new Die({
+                id: 'die'
+            });
+            
+            die.roll();*/
+            //let module = await import('./die.mjs');
+            import(g_gamethemeurl + 'img/die.js').then(module => {
+                const die = new module.Die({
+                    id: 'die',
+                    img: g_gamethemeurl,
+                });
+            
+                die.roll();
+            });
+            //</script>
+
             
  
             // Setup game notifications to handle (see "setupNotifications" method below)
