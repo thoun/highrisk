@@ -545,18 +545,21 @@ class HighRisk {
         die.roll();*/
         //let module = await import('./die.mjs');
         const die = {
-            id: 1,
             value: 4,
             rolled: true,
         };
         import(g_gamethemeurl + 'img/die.js').then(dieModule => {
-            const dieElem = new dieModule.Die(die, {
-                //color: 'FF0000',
+            const colorDieElem = new dieModule.Die(Object.assign(Object.assign({}, die), { id: 1 }), {
                 backgroundImage: 'dice.png',
-                containerId: 'die',
+                containerId: 'img-die',
                 img: g_gamethemeurl,
             });
-            //setTimeout(() => dieElem.setRolled(true), 2000);
+            const dottedDieElem = new dieModule.Die(Object.assign(Object.assign({}, die), { id: 2 }), {
+                color: 'FF0000',
+                containerId: 'dotted-die',
+                img: g_gamethemeurl,
+            });
+            //setTimeout(() => colorDieElem.setRolled(true), 2000);
         });
         //</script>
         //console.log(this.base.bgagame.highrisk.prototype.addTooltipHtml);
