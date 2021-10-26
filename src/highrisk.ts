@@ -68,13 +68,22 @@ class HighRisk implements HighRiskGame {
         
         die.roll();*/
         //let module = await import('./die.mjs');
-        import(g_gamethemeurl + 'img/die.js').then(module => {
-            const die = new module.Die({
-                id: 'die',
+
+        const die = {
+            id: 1,
+            value: 4,
+            rolled: true,
+        };
+
+        import(g_gamethemeurl + 'img/die.js').then(dieModule => {
+            const dieElem = new dieModule.Die(die, {
+                //color: 'FF0000',
+                backgroundImage: 'dice.png',
+                containerId: 'die',
                 img: g_gamethemeurl,
             });
         
-            die.roll();
+            //setTimeout(() => dieElem.setRolled(true), 2000);
         });
         //</script>
 
