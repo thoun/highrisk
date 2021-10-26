@@ -1,0 +1,18 @@
+{
+    "rootDir": ".", 
+    "compilerOptions": {
+      "target": "es2015",
+      "module": "es2015",
+      "lib": ["dom", "esnext"],  
+      "sourceMap": false,
+      "outFile": "highrisk.js",
+    },
+    "files": [
+        "src/framework.d.ts",
+        "src/highrisk.d.ts",
+        "src/slide-utils.ts",
+        "src/dice-manager.ts",
+        "src/highrisk.ts",
+        "src/define.ts"
+    ]
+}

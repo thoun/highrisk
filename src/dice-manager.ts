@@ -1,90 +1,60 @@
-function slideToObjectAndAttach(game, object, destinationId, posX, posY) {
-    return new Promise((resolve) => {
-        const destination = document.getElementById(destinationId);
-        if (destination.contains(object)) {
-            return resolve(false);
-        }
-        object.style.zIndex = '10';
-        const animation = (posX || posY) ?
-            game.slideToObjectPos(object, destinationId, posX, posY) :
-            game.slideToObject(object, destinationId);
-        dojo.connect(animation, 'onEnd', dojo.hitch(this, () => {
-            object.style.top = 'unset';
-            object.style.left = 'unset';
-            object.style.position = 'relative';
-            object.style.zIndex = 'unset';
-            destination.appendChild(object);
-            resolve(true);
-        }));
-        animation.play();
-    });
-}
-function transitionToObjectAndAttach(object, destinationId, zoom) {
-    return new Promise((resolve) => {
-        const destination = document.getElementById(destinationId);
-        if (destination.contains(object)) {
-            return resolve(false);
-        }
-        const destinationBR = document.getElementById(destinationId).getBoundingClientRect();
-        const originBR = object.getBoundingClientRect();
-        const deltaX = destinationBR.left - originBR.left;
-        const deltaY = destinationBR.top - originBR.top;
-        object.style.zIndex = '10';
-        object.style.transition = `transform 0.5s linear`;
-        object.style.transform = `translate(${deltaX / zoom}px, ${deltaY / zoom}px)`;
-        setTimeout(() => {
-            object.style.zIndex = null;
-            object.style.transition = null;
-            object.style.transform = null;
-            destination.appendChild(object);
-            resolve(true);
-        }, 500);
-    });
-}
+type DieClickAction = 'move' | 'change' | 'psychicProbeRoll';
+
 class DiceManager {
-    constructor(game, setupDice) {
-        this.game = game;
-        this.dice = [];
-        this.dieFaceSelectors = [];
+    private dice: Dice[] = [];
+    private dieFaceSelectors: DieFaceSelector[] = [];
+    private action: DieClickAction;
+    private changeDieArgs: EnteringChangeDieArgs;
+
+    constructor(private game: HighRiskGame, setupDice: Dice[]) {
         // TODO use setupDice ?
     }
-    hideLock() {
+
+    public hideLock() {
         dojo.addClass('locked-dice', 'hide-lock');
     }
-    showLock() {
+    public showLock() {
         dojo.removeClass('locked-dice', 'hide-lock');
     }
-    getLockedDice() {
+
+    public getLockedDice() {
         return this.dice.filter(die => die.locked);
     }
-    destroyFreeDice() {
+    
+    public destroyFreeDice(): number[] {
         const freeDice = this.dice.filter(die => !die.locked);
         freeDice.forEach(die => this.removeDice(die));
         return freeDice.map(die => die.id);
     }
-    removeAllDice() {
+
+    public removeAllDice() {
         this.dice.forEach(die => this.removeDice(die));
         this.clearDiceHtml();
         this.dice = [];
     }
-    setDiceForThrowDice(dice, inTokyo, isCurrentPlayerActive) {
-        var _a;
+
+    public setDiceForThrowDice(dice: Dice[], inTokyo: boolean, isCurrentPlayerActive: boolean) {
         this.action = 'move';
-        (_a = this.dice) === null || _a === void 0 ? void 0 : _a.forEach(die => this.removeDice(die));
+        this.dice?.forEach(die => this.removeDice(die));
         this.clearDiceHtml();
         this.dice = dice;
+
         const selectable = isCurrentPlayerActive;
+
         dice.forEach(die => this.createDice(die, selectable, inTokyo));
+
         dojo.toggleClass('rolled-dice', 'selectable', selectable);
     }
-    disableDiceAction() {
+
+    public disableDiceAction() {
         dojo.removeClass('rolled-dice', 'selectable');
         this.action = undefined;
     }
-    setDiceForChangeDie(dice, args, inTokyo, isCurrentPlayerActive) {
-        var _a;
+
+    public setDiceForChangeDie(dice: Dice[], args: EnteringChangeDieArgs, inTokyo: boolean, isCurrentPlayerActive: boolean) {
         this.action = args.hasHerdCuller || args.hasPlotTwist || args.hasStretchy || args.hasClown ? 'change' : null;
         this.changeDieArgs = args;
+
         if (this.dice.length) {
             dice.forEach(die => {
                 const divId = `dice${die.id}`;
@@ -93,9 +63,11 @@ class DiceManager {
             });
             return;
         }
-        (_a = this.dice) === null || _a === void 0 ? void 0 : _a.forEach(die => this.removeDice(die));
+
+        this.dice?.forEach(die => this.removeDice(die));  
         this.clearDiceHtml();
         this.dice = dice;
+        
         const onlyHerdCuller = args.hasHerdCuller && !args.hasPlotTwist && !args.hasStretchy && !args.hasClown;
         dice.forEach(die => {
             const divId = `dice${die.id}`;
@@ -103,47 +75,57 @@ class DiceManager {
             const selectable = isCurrentPlayerActive && this.action !== null && (!onlyHerdCuller || die.value !== 1);
             dojo.toggleClass(divId, 'selectable', selectable);
             this.addDiceRollClass(die);
+
             if (selectable) {
                 document.getElementById(divId).addEventListener('click', event => this.dieClick(die, event));
             }
         });
     }
-    setDiceForSelectHeartAction(dice, inTokyo) {
+
+    public setDiceForSelectHeartAction(dice: Dice[], inTokyo: boolean) { 
         this.action = null;
         if (this.dice.length) {
             return;
         }
         this.clearDiceHtml();
         this.dice = dice;
+        
         dice.forEach(die => {
             this.createAndPlaceDiceHtml(die, inTokyo, `locked-dice${die.value}`);
             this.addDiceRollClass(die);
         });
     }
-    setDiceForPsychicProbe(dice, inTokyo, isCurrentPlayerActive = false) {
+
+    setDiceForPsychicProbe(dice: Dice[], inTokyo: boolean, isCurrentPlayerActive: boolean = false) {
         this.action = 'psychicProbeRoll';
+
         /*if (this.dice.length) { if active, event are not reset and roll is not applied
             return;
         }*/
+
         this.clearDiceHtml();
         this.dice = dice;
+        
         dice.forEach(die => {
             this.createAndPlaceDiceHtml(die, inTokyo, `locked-dice${die.value}`);
             this.addDiceRollClass(die);
+
             if (isCurrentPlayerActive) {
                 const divId = `dice${die.id}`;
                 document.getElementById(divId).addEventListener('click', event => this.dieClick(die, event));
             }
         });
+
         dojo.toggleClass('rolled-dice', 'selectable', isCurrentPlayerActive);
     }
-    changeDie(dieId, inTokyo, toValue, roll) {
+
+    public changeDie(dieId: number, inTokyo: boolean, toValue: number, roll?: boolean) {
         const die = this.dice.find(die => die.id == dieId);
         const divId = `dice${dieId}`;
         const div = document.getElementById(divId);
         if (div) {
             dojo.removeClass(div, `dice${div.dataset.diceValue}`);
-            div.dataset.diceValue = '' + toValue;
+            div.dataset.diceValue = ''+toValue;
             dojo.addClass(div, `dice${toValue}`);
             const list = div.getElementsByTagName('ol')[0];
             list.dataset.rollType = roll ? 'odd' : 'change';
@@ -151,26 +133,26 @@ class DiceManager {
                 this.addDiceRollClass({
                     id: dieId,
                     rolled: roll
-                });
+                } as Dice);
             }
             if (inTokyo) {
                 if (die.value !== 4 && toValue === 4) {
                     dojo.place('<div class="icon forbidden"></div>', divId);
-                }
-                else if (die.value === 4 && toValue !== 4) {
-                    Array.from(div.getElementsByClassName('forbidden')).forEach((elem) => dojo.destroy(elem));
+                } else if (die.value === 4 && toValue !== 4) {
+                    Array.from(div.getElementsByClassName('forbidden')).forEach((elem: HTMLElement) => dojo.destroy(elem));
                 }
             }
-            list.dataset.roll = '' + toValue;
+            list.dataset.roll = ''+toValue;
         }
         if (die) {
             die.value = toValue;
         }
     }
-    showCamouflageRoll(dice) {
+
+    showCamouflageRoll(dice: Dice[]) {
         this.clearDiceHtml();
         dice.forEach((dieValue, index) => {
-            const die = {
+            const die: Dice = {
                 id: index,
                 value: dieValue.value,
                 extra: false,
@@ -181,26 +163,32 @@ class DiceManager {
             this.addDiceRollClass(die);
         });
     }
-    clearDiceHtml() {
-        for (let i = 1; i <= 6; i++) {
+
+    private clearDiceHtml() {        
+        for (let i=1; i<=6; i++) {
             document.getElementById(`locked-dice${i}`).innerHTML = '';
         }
         document.getElementById(`dice-selector`).innerHTML = '';
     }
-    resolveNumberDice(args) {
+
+    public resolveNumberDice(args: NotifResolveNumberDiceArgs) {
         const dice = this.dice.filter(die => die.value === args.diceValue);
-        this.game.displayScoring(`dice${(dice[1] || dice[0]).id}`, this.game.isHalloweenExpansion() ? '000000' : '96c93c', args.deltaPoints, 1500);
+        (this.game as any).displayScoring( `dice${(dice[1] || dice[0]).id}`, this.game.isHalloweenExpansion() ? '000000' : '96c93c', args.deltaPoints, 1500);
         this.dice.filter(die => die.value === args.diceValue).forEach(die => this.removeDice(die, 1000, 1500));
     }
-    resolveHealthDiceInTokyo() {
+
+    public resolveHealthDiceInTokyo() {
         this.dice.filter(die => die.value === 4).forEach(die => this.removeDice(die, 1000));
     }
-    addDiceAnimation(diceValue, playerIds, number, targetToken) {
+
+    private addDiceAnimation(diceValue: number, playerIds: number[], number?: number, targetToken?: TokenType) {
         let dice = this.dice.filter(die => die.value === diceValue && document.getElementById(`dice${die.id}`).dataset.animated !== 'true');
         if (number) {
             dice = dice.slice(0, number);
         }
+
         playerIds.forEach((playerId, playerIndex) => {
+
             const shift = targetToken ? 16 : 59;
             dice.forEach((die, dieIndex) => {
                 const dieDiv = document.getElementById(`dice${die.id}`);
@@ -213,6 +201,7 @@ class DiceManager {
                     const deltaX = (dieIndex - middleIndex) * 220;
                     document.getElementById(animationId).style.transform = `translate(${deltaX}px, 100px) scale(1)`;
                 }, 50);
+
                 setTimeout(() => {
                     let targetId = `monster-figure-${playerId}`;
                     if (targetToken) {
@@ -220,54 +209,67 @@ class DiceManager {
                         targetId = tokensDivs[tokensDivs.length - (dieIndex + 1)].id;
                     }
                     let destination = document.getElementById(targetId).getBoundingClientRect();
+
                     const deltaX = destination.left - origin.left + shift * this.game.getZoom();
                     const deltaY = destination.top - origin.top + shift * this.game.getZoom();
+
                     document.getElementById(animationId).style.transition = `transform 0.5s ease-in`;
                     document.getElementById(animationId).style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${0.3 * this.game.getZoom()})`;
                 }, 1000);
+
                 if (playerIndex === playerIds.length - 1) {
                     this.removeDice(die, 500, 2500);
                 }
             });
         });
     }
-    resolveHealthDice(playerId, number, targetToken) {
+
+    public resolveHealthDice(playerId: number, number: number, targetToken?: TokenType) {
         this.addDiceAnimation(4, [playerId], number, targetToken);
     }
-    resolveEnergyDice(args) {
+
+    public resolveEnergyDice(args: NotifResolveEnergyDiceArgs) {
         this.addDiceAnimation(5, [args.playerId]);
     }
-    resolveSmashDice(args) {
+
+    public resolveSmashDice(args: NotifResolveSmashDiceArgs) {
         this.addDiceAnimation(6, args.smashedPlayersIds);
     }
-    toggleLockDice(die, event, forcedLockValue = null) {
-        if ((event === null || event === void 0 ? void 0 : event.altKey) || (event === null || event === void 0 ? void 0 : event.ctrlKey)) {
+
+    private toggleLockDice(die: Dice, event: MouseEvent, forcedLockValue: boolean | null = null) {
+        if (event?.altKey || event?.ctrlKey) {
             let dice = [];
+            
             if (event.ctrlKey && event.altKey) { // move everything but die.value dice
                 dice = this.dice.filter(idie => idie.locked === die.locked && idie.value !== die.value);
-            }
-            else if (event.ctrlKey) { // move everything with die.value dice
+            } else if (event.ctrlKey) { // move everything with die.value dice
                 dice = this.dice.filter(idie => idie.locked === die.locked && idie.value === die.value);
-            }
-            else { // move everything but die
+            } else { // move everything but die
                 dice = this.dice.filter(idie => idie.locked === die.locked && idie.id !== die.id);
             }
+
             dice.forEach(idie => this.toggleLockDice(idie, null));
             return;
         }
+
+
         die.locked = forcedLockValue === null ? !die.locked : forcedLockValue;
         const dieDivId = `dice${die.id}`;
         const dieDiv = document.getElementById(dieDivId);
+
         const destinationId = die.locked ? `locked-dice${die.value}` : `dice-selector`;
         const tempDestinationId = `temp-destination-wrapper-${destinationId}-${die.id}`;
         const tempOriginId = `temp-origin-wrapper-${destinationId}-${die.id}`;
+
         if (document.getElementById(destinationId)) {
             dojo.place(`<div id="${tempDestinationId}" style="width: 0px; height: ${dieDiv.clientHeight}px; display: inline-block; margin: 0;"></div>`, destinationId);
             dojo.place(`<div id="${tempOriginId}" style="width: ${dieDiv.clientWidth}px; height: ${dieDiv.clientHeight}px; display: inline-block; margin: -3px 6px 3px -3px;"></div>`, dieDivId, 'after');
+            
             const destination = document.getElementById(destinationId);
             const tempDestination = document.getElementById(tempDestinationId);
             const tempOrigin = document.getElementById(tempOriginId);
             tempOrigin.appendChild(dieDiv);
+
             dojo.animateProperty({
                 node: tempDestinationId,
                 properties: {
@@ -295,26 +297,30 @@ class DiceManager {
                 dojo.destroy(tempOrigin);
             });
         }
+
         this.activateRethrowButton();
         this.game.checkBuyEnergyDrinkState();
         this.game.checkUseSmokeCloudState();
     }
-    lockAll() {
-        var _a;
-        (_a = this.dice) === null || _a === void 0 ? void 0 : _a.filter(die => !die.locked).forEach(die => this.toggleLockDice(die, null, true));
+
+    public lockAll() {
+        this.dice?.filter(die => !die.locked).forEach(die => this.toggleLockDice(die, null, true));
     }
-    activateRethrowButton() {
+
+    private activateRethrowButton() {
         if (document.getElementById('rethrow_button')) {
             dojo.toggleClass('rethrow_button', 'disabled', !this.canRethrow());
         }
     }
-    canRethrow() {
+
+    public canRethrow(): boolean {
         return this.dice.some(die => !die.locked);
     }
-    createAndPlaceDiceHtml(die, inTokyo, destinationId) {
+
+    private createAndPlaceDiceHtml(die: Dice, inTokyo: boolean, destinationId: string) {
         let html = `<div id="dice${die.id}" class="dice dice${die.value}" data-dice-id="${die.id}" data-dice-value="${die.value}">
         <ol class="die-list" data-roll="${die.value}">`;
-        for (let dieFace = 1; dieFace <= 6; dieFace++) {
+        for (let dieFace=1; dieFace<=6; dieFace++) {
             html += `<li class="die-item ${die.extra ? 'green' : 'black'} side${dieFace}" data-side="${dieFace}"></li>`;
         }
         html += `</ol>`;
@@ -322,89 +328,99 @@ class DiceManager {
             html += `<div class="icon forbidden"></div>`;
         }
         html += `</div>`;
+
         // security to destroy pre-existing die with same id
         const dieDiv = document.getElementById(`dice${die.id}`);
-        dieDiv === null || dieDiv === void 0 ? void 0 : dieDiv.parentNode.removeChild(dieDiv);
+        dieDiv?.parentNode.removeChild(dieDiv);
+
         dojo.place(html, destinationId);
     }
-    getDiceDiv(die) {
-        return document.getElementById(`dice${die.id}`);
+
+    private getDiceDiv(die: Dice): HTMLDivElement {
+        return document.getElementById(`dice${die.id}`) as HTMLDivElement;
     }
-    createDice(die, selectable, inTokyo) {
+
+    private createDice(die: Dice, selectable: boolean, inTokyo: boolean) {
         this.createAndPlaceDiceHtml(die, inTokyo, die.locked ? `locked-dice${die.value}` : `dice-selector`);
+
         const div = this.getDiceDiv(die);
-        div.addEventListener('animationend', (e) => {
+        div.addEventListener('animationend', (e: AnimationEvent) => {
             if (e.animationName == 'rolled-dice') {
                 div.dataset.rolled = 'false';
             }
         });
+
         this.addDiceRollClass(die);
+
         if (selectable) {
             div.addEventListener('click', event => this.dieClick(die, event));
         }
     }
-    dieClick(die, event) {
+
+    private dieClick(die: Dice, event: MouseEvent) {
         if (this.action === 'move') {
             this.toggleLockDice(die, event);
-        }
-        else if (this.action === 'change') {
+        } else if (this.action === 'change') {
             this.toggleBubbleChangeDie(die);
-        }
-        else if (this.action === 'psychicProbeRoll') {
+        } else if (this.action === 'psychicProbeRoll') {
             this.game.psychicProbeRollDie(die.id);
         }
     }
-    addRollToDiv(dieDiv, rollType, attempt = 0) {
-        const dieList = dieDiv.getElementsByClassName('die-list')[0];
+
+    private addRollToDiv(dieDiv: HTMLDivElement, rollType: string, attempt: number = 0) {
+        const dieList = (dieDiv.getElementsByClassName('die-list')[0] as HTMLDivElement);
         if (dieList) {
             dieList.dataset.rollType = rollType;
-        }
-        else if (attempt < 5) {
-            setTimeout(() => this.addRollToDiv(dieDiv, rollType, attempt + 1), 200);
+        } else if (attempt < 5) {
+            setTimeout(() => this.addRollToDiv(dieDiv, rollType, attempt + 1), 200); 
         }
     }
-    addDiceRollClass(die) {
+
+    private addDiceRollClass(die: Dice) {
         const dieDiv = this.getDiceDiv(die);
+
         dieDiv.dataset.rolled = die.rolled ? 'true' : 'false';
-        if (die.rolled) {
-            setTimeout(() => this.addRollToDiv(dieDiv, Math.random() < 0.5 ? 'odd' : 'even'), 200);
-        }
-        else {
+        if (die.rolled) {            
+            setTimeout(() => this.addRollToDiv(dieDiv, Math.random() < 0.5 ? 'odd' : 'even'), 200); 
+        } else {
             this.addRollToDiv(dieDiv, '-');
         }
     }
-    removeDice(die, duration, delay) {
+
+    private removeDice(die: Dice, duration?: number, delay?: number) {
         if (duration) {
-            this.game.fadeOutAndDestroy(`dice${die.id}`, duration, delay);
-        }
-        else {
+            (this.game as any).fadeOutAndDestroy(`dice${die.id}`, duration, delay);
+        } else {
             const dieDiv = document.getElementById(`dice${die.id}`);
-            dieDiv === null || dieDiv === void 0 ? void 0 : dieDiv.parentNode.removeChild(dieDiv);
+            dieDiv?.parentNode.removeChild(dieDiv);
         }
         this.dice.splice(this.dice.indexOf(die), 1);
     }
-    hideBubble(dieId) {
+
+    private hideBubble(dieId: number) {
         const bubble = document.getElementById(`discussion_bubble_dice${dieId}`);
         if (bubble) {
             bubble.style.display = 'none';
             bubble.dataset.visible = 'false';
         }
     }
-    removeAllBubbles() {
+
+    public removeAllBubbles() {
         this.dieFaceSelectors = [];
         Array.from(document.getElementsByClassName('change-die-discussion_bubble')).forEach(elem => elem.parentElement.removeChild(elem));
     }
-    toggleBubbleChangeDie(die) {
-        const divId = `dice${die.id}`;
-        if (!document.getElementById(`discussion_bubble_${divId}`)) {
+
+    private toggleBubbleChangeDie(die: Dice) {
+        const divId = `dice${die.id}`;    
+        if (!document.getElementById(`discussion_bubble_${divId}`)) { 
             dojo.place(`<div id="discussion_bubble_${divId}" class="discussion_bubble change-die-discussion_bubble"></div>`, divId);
         }
         const bubble = document.getElementById(`discussion_bubble_${divId}`);
         const visible = bubble.dataset.visible == 'true';
+
         if (visible) {
             this.hideBubble(die.id);
-        }
-        else {
+        } else {
             const bubbleActionButtonsId = `discussion_bubble_${divId}-action-buttons`;
             const bubbleDieFaceSelectorId = `discussion_bubble_${divId}-die-face-selector`;
             const creation = bubble.innerHTML == '';
@@ -414,48 +430,77 @@ class DiceManager {
                 <div id="${bubbleActionButtonsId}" class="action-buttons"></div>
                 `, bubble.id);
             }
+
             const herdCullerButtonId = `${bubbleActionButtonsId}-herdCuller`;
             const plotTwistButtonId = `${bubbleActionButtonsId}-plotTwist`;
             const stretchyButtonId = `${bubbleActionButtonsId}-stretchy`;
             const clownButtonId = `${bubbleActionButtonsId}-clown`;
+
             const args = this.changeDieArgs;
+
             if (!this.dieFaceSelectors[die.id]) {
                 this.dieFaceSelectors[die.id] = new DieFaceSelector(bubbleDieFaceSelectorId, die.value, args.inTokyo);
             }
             const dieFaceSelector = this.dieFaceSelectors[die.id];
+
             if (creation) {
+
                 const buttonText = _("Change die face with ${card_name}");
+                
                 if (args.hasClown) {
-                    this.game.createButton(bubbleActionButtonsId, clownButtonId, dojo.string.substitute(buttonText, { 'card_name': `<strong>${this.game.cards.getCardName(212, 'text-only')}</strong>` }), () => {
-                        this.game.changeDie(die.id, dieFaceSelector.getValue(), 212),
+                    this.game.createButton(
+                        bubbleActionButtonsId, 
+                        clownButtonId, 
+                        dojo.string.substitute(buttonText, {'card_name': `<strong>${this.game.cards.getCardName(212, 'text-only')}</strong>` }),
+                        () => {
+                            this.game.changeDie(die.id, dieFaceSelector.getValue(), 212),
                             this.toggleBubbleChangeDie(die);
-                    }, true);
-                }
-                else {
+                        },
+                        true
+                    );
+                } else {
                     if (args.hasHerdCuller) {
-                        this.game.createButton(bubbleActionButtonsId, herdCullerButtonId, dojo.string.substitute(buttonText, { 'card_name': `<strong>${this.game.cards.getCardName(22, 'text-only')}</strong>` }), () => {
-                            this.game.changeDie(die.id, dieFaceSelector.getValue(), 22);
-                            this.toggleBubbleChangeDie(die);
-                        }, true);
+                        this.game.createButton(
+                            bubbleActionButtonsId, 
+                            herdCullerButtonId, 
+                            dojo.string.substitute(buttonText, {'card_name': `<strong>${this.game.cards.getCardName(22, 'text-only')}</strong>` }),
+                            () => {
+                                this.game.changeDie(die.id, dieFaceSelector.getValue(), 22);
+                                this.toggleBubbleChangeDie(die);
+                            },
+                            true
+                        );
                     }
                     if (args.hasPlotTwist) {
-                        this.game.createButton(bubbleActionButtonsId, plotTwistButtonId, dojo.string.substitute(buttonText, { 'card_name': `<strong>${this.game.cards.getCardName(33, 'text-only')}</strong>` }), () => {
-                            this.game.changeDie(die.id, dieFaceSelector.getValue(), 33),
+                        this.game.createButton(
+                            bubbleActionButtonsId, 
+                            plotTwistButtonId, 
+                            dojo.string.substitute(buttonText, {'card_name': `<strong>${this.game.cards.getCardName(33, 'text-only')}</strong>` }),
+                            () => {
+                                this.game.changeDie(die.id, dieFaceSelector.getValue(), 33),
                                 this.toggleBubbleChangeDie(die);
-                        }, true);
+                            },
+                            true
+                        );
                     }
                     if (args.hasStretchy) {
-                        this.game.createButton(bubbleActionButtonsId, stretchyButtonId, dojo.string.substitute(buttonText, { 'card_name': `<strong>${this.game.cards.getCardName(44, 'text-only')}</strong>` }) + formatTextIcons(' (2 [Energy])'), () => {
-                            this.game.changeDie(die.id, dieFaceSelector.getValue(), 44),
+                        this.game.createButton(
+                            bubbleActionButtonsId, 
+                            stretchyButtonId, 
+                            dojo.string.substitute(buttonText, {'card_name': `<strong>${this.game.cards.getCardName(44, 'text-only')}</strong>` }) + formatTextIcons(' (2 [Energy])'),
+                            () => {
+                                this.game.changeDie(die.id, dieFaceSelector.getValue(), 44),
                                 this.toggleBubbleChangeDie(die);
-                        }, true);
+                            },
+                            true
+                        );
                     }
                 }
+
                 dieFaceSelector.onChange = value => {
                     if (args.hasClown) {
                         dojo.toggleClass(clownButtonId, 'disabled', value < 1);
-                    }
-                    else {
+                    } else {
                         if (args.hasHerdCuller && die.value > 1) {
                             dojo.toggleClass(herdCullerButtonId, 'disabled', value != 1);
                         }
@@ -467,14 +512,16 @@ class DiceManager {
                         }
                     }
                 };
+
                 bubble.addEventListener('click', event => event.stopImmediatePropagation());
             }
+
             if (die.value == dieFaceSelector.getValue()) {
                 dieFaceSelector.reset(die.value);
+                
                 if (args.hasClown) {
                     dojo.addClass(stretchyButtonId, 'disabled');
-                }
-                else {
+                } else {
                     if (args.hasHerdCuller) {
                         dojo.addClass(herdCullerButtonId, 'disabled');
                     }
@@ -486,196 +533,13 @@ class DiceManager {
                     }
                 }
             }
+
             args.dice.filter(idie => idie.id != die.id).forEach(idie => this.hideBubble(idie.id));
+
             bubble.style.display = 'block';
             bubble.dataset.visible = 'true';
         }
-    }
-}
-const isDebug = window.location.host == 'studio.boardgamearena.com' || window.location.hash.indexOf('debug') > -1;
-;
-const log = isDebug ? console.log.bind(window.console) : function () { };
-class HighRisk {
-    constructor() {
-    }
-    /*
-        setup:
-
-        This method must set up the game user interface according to current game situation specified
-        in parameters.
-
-        The method is called each time the game interface is displayed to a player, ie:
-        _ when the game starts
-        _ when a player refreshes the game page (F5)
-
-        "gamedatas" argument contains all datas retrieved by your "getAllDatas" PHP method.
-    */
-    setup(gamedatas) {
-        const players = Object.values(gamedatas.players);
-        log("Starting game setup");
-        /*this.gamedatas = gamedatas;
-        this.createPlayerPanels(gamedatas);
-        this.diceManager = new DiceManager(this, gamedatas.dice);
-        this.createVisibleCards(gamedatas.visibleCards, gamedatas.topDeckCardBackType);
-        this.createPlayerTables(gamedatas);
-        this.tableManager = new TableManager(this, this.playerTables);
-        // placement of monster must be after TableManager first paint
-        setTimeout(() => this.playerTables.forEach(playerTable => playerTable.initPlacement()), 200);
-        this.setMimicToken(gamedatas.mimickedCard);
-
-        const playerId = this.getPlayerId();
-        const currentPlayer = players.find(player => Number(player.id) === playerId);
-
-        if (currentPlayer?.rapidHealing) {
-            this.addRapidHealingButton(currentPlayer.energy, currentPlayer.health >= currentPlayer.maxHealth);
-        }
-        if (currentPlayer?.location > 0) {
-            this.addAutoLeaveUnderButton();
-        }*/
-        //<!--   <script type="module" src="./die.mjs"></script>-->
-        //<script>
-        /*import { Die } from './die.mjs';
         
-        const die = new Die({
-            id: 'die'
-        });
-        
-        die.roll();*/
-        //let module = await import('./die.mjs');
-        import(g_gamethemeurl + 'img/die.js').then(module => {
-            const die = new module.Die({
-                id: 'die',
-                img: g_gamethemeurl,
-            });
-            die.roll();
-        });
-        //</script>
-        this.setupNotifications();
-        log("Ending game setup");
     }
-    ///////////////////////////////////////////////////
-    //// Game & client states
-    // onEnteringState: this method is called each time we are entering into a new game state.
-    //                  You can use this method to perform some user interface changes at this moment.
-    //
-    onEnteringState(stateName, args) {
-        log('Entering state: ' + stateName, args.args);
-    }
-    onLeavingState(stateName) {
-        log('Leaving state: ' + stateName);
-    }
-    // onUpdateActionButtons: in this method you can manage "action buttons" that are displayed in the
-    //                        action status bar (ie: the HTML links in the status bar).
-    //
-    onUpdateActionButtons(stateName, args) {
-    }
-    ///////////////////////////////////////////////////
-    //// Utility methods
-    ///////////////////////////////////////////////////
-    getPlayerId() {
-        return Number(this.player_id);
-    }
-    ///////////////////////////////////////////////////
-    //// Reaction to cometD notifications
-    /*
-        setupNotifications:
 
-        In this method, you associate each of your game notifications with your local method to handle it.
-
-        Note: game notification names correspond to "notifyAllPlayers" and "notifyPlayer" calls in
-                your pylos.game.php file.
-
-    */
-    setupNotifications() {
-        //log( 'notifications subscriptions setup' );
-        const notifs = [
-        /*['pickMonster', 500],
-        ['setInitialCards', 500],
-        ['resolveNumberDice', ANIMATION_MS],
-        ['resolveHealthDice', ANIMATION_MS],
-        ['resolveHealingRay', ANIMATION_MS],
-        ['resolveHealthDiceInTokyo', ANIMATION_MS],
-        ['removeShrinkRayToken', ANIMATION_MS],
-        ['removePoisonToken', ANIMATION_MS],
-        ['resolveEnergyDice', ANIMATION_MS],
-        ['resolveSmashDice', ANIMATION_MS],
-        ['playerEliminated', ANIMATION_MS],
-        ['playerEntersTokyo', ANIMATION_MS],
-        ['renewCards', ANIMATION_MS],
-        ['buyCard', ANIMATION_MS],
-        ['leaveTokyo', ANIMATION_MS],
-        ['useCamouflage', ANIMATION_MS],
-        ['changeDie', ANIMATION_MS],
-        ['rethrow3changeDie', ANIMATION_MS],
-        ['resolvePlayerDice', 500],
-        ['points', 1],
-        ['health', 1],
-        ['energy', 1],
-        ['maxHealth', 1],
-        ['shrinkRayToken', 1],
-        ['poisonToken', 1],
-        ['setCardTokens', 1],
-        ['removeCards', 1],
-        ['setMimicToken', 1],
-        ['removeMimicToken', 1],
-        ['toggleRapidHealing', 1],
-        ['updateLeaveTokyoUnder', 1],
-        ['updateStayTokyoOver', 1],
-        ['kotPlayerEliminated', 1],*/
-        ];
-        notifs.forEach((notif) => {
-            dojo.subscribe(notif[0], this, `notif_${notif[0]}`);
-            this.notifqueue.setSynchronous(notif[0], notif[1]);
-        });
-    }
 }
-define([
-    "dojo", "dojo/_base/declare",
-    "ebg/core/gamegui",
-    "ebg/counter",
-    "ebg/stock"
-], function (dojo, declare) {
-    return declare("bgagame.highrisk", ebg.core.gamegui, {
-        game: new HighRisk(),
-        //...(new HighRisk()),
-        constructor: function () {
-            //this.game.constructor()
-        },
-        setup: function (gamedatas) {
-            this.game.setup(gamedatas);
-        },
-        ///////////////////////////////////////////////////
-        //// Game & client states
-        // onEnteringState: this method is called each time we are entering into a new game state.
-        //                  You can use this method to perform some user interface changes at this moment.
-        //
-        /*onEnteringState: function( stateName, args )
-        {
-            console.log( 'Entering state: '+stateName );
-        },*/
-        // onLeavingState: this method is called each time we are leaving a game state.
-        //                 You can use this method to perform some user interface changes at this moment.
-        //
-        onLeavingState: function (stateName) {
-            console.log('Leaving state: ' + stateName);
-        },
-        // onUpdateActionButtons: in this method you can manage "action buttons" that are displayed in the
-        //                        action status bar (ie: the HTML links in the status bar).
-        //        
-        onUpdateActionButtons: function (stateName, args) {
-            console.log('onUpdateActionButtons: ' + stateName);
-        },
-        setupNotifications: function () {
-            console.log('notifications subscriptions setup');
-            // TODO: here, associate your game notifications with local methods
-            // Example 1: standard notification handling
-            // dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
-            // Example 2: standard notification handling + tell the user interface to wait
-            //            during 3 seconds after calling the method in order to let the players
-            //            see what is happening in the game.
-            // dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
-            // this.notifqueue.setSynchronous( 'cardPlayed', 3000 );
-            // 
-        },
-    });
-});
