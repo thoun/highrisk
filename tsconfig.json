@@ -13,6 +13,6 @@
         "src/slide-utils.ts",
         "src/dice-manager.ts",
         "src/highrisk.ts",
-        "src/define.ts"
+        "src/highrisk.ts"
     ]
 }

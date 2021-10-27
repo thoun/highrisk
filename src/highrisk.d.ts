@@ -2,24 +2,20 @@
  * Your game interfaces
  */
 
-interface Dice {
+interface Die {
     id: number;
     value: number;
     rolled: boolean;
 }
 
+interface Meeple {
+    id: number;
+    playerId: number;
+    position: number;
+}
 
 interface HighRiskPlayer extends Player {
-    player_no: string;
-    poisonTokens: number;
-    shrinkRayTokens: number;
-    rapidHealing: boolean;
-    health: number;
-    energy: number;
-    monster: number;
-    location: number;
-    maxHealth: number;
-    playerDead: number;
+    meeples: Meeple[];
 }
 
 interface HighRiskGamedatas {
@@ -35,7 +31,7 @@ interface HighRiskGamedatas {
     tablespeed: string;
 
     // Add here variables you set up in getAllDatas
-    dice: Dice[];
+    dice: Die[];
 }
 
 interface HighRiskGame extends Game {

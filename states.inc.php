@@ -49,63 +49,68 @@
 
 //    !! It is not a good idea to modify this file when a game is running !!
 
- 
-$machinestates = [
+require_once("modules/php/constants.inc.php");
+
+$basicGameStates = [
 
     // The initial state. Please do not modify.
-    1 => array(
+    ST_BGA_GAME_SETUP => [
         "name" => "gameSetup",
-        "description" => "",
+        "description" => clienttranslate("Game setup"),
         "type" => "manager",
         "action" => "stGameSetup",
-        "transitions" => array( "" => 2 )
-    ),
-    
-    // Note: ID=2 => your first state
+        "transitions" => [ "" => ST_START_TURN ]
+    ],
 
-    2 => array(
-    		"name" => "playerTurn",
-    		"description" => clienttranslate('${actplayer} must play a card or pass'),
-    		"descriptionmyturn" => clienttranslate('${you} must play a card or pass'),
-    		"type" => "activeplayer",
-    		"possibleactions" => array( "playCard", "pass" ),
-    		"transitions" => array( "playCard" => 2, "pass" => 2 )
-    ),
-    
-/*
-    Examples:
-    
-    2 => array(
+    ST_START_TURN => [
         "name" => "nextPlayer",
-        "description" => '',
+        "description" => "",
+        "type" => "game",
+        "action" => "stStartTurn",
+        "transitions" => [
+            "" => ST_PLAYER_THROW_DICE,
+        ],
+    ],
+
+    ST_NEXT_PLAYER => [
+        "name" => "nextPlayer",
+        "description" => "",
         "type" => "game",
         "action" => "stNextPlayer",
-        "updateGameProgression" => true,   
-        "transitions" => array( "endGame" => 99, "nextPlayer" => 10 )
-    ),
-    
-    10 => array(
-        "name" => "playerTurn",
-        "description" => clienttranslate('${actplayer} must play a card or pass'),
-        "descriptionmyturn" => clienttranslate('${you} must play a card or pass'),
-        "type" => "activeplayer",
-        "possibleactions" => array( "playCard", "pass" ),
-        "transitions" => array( "playCard" => 2, "pass" => 2 )
-    ), 
-
-*/    
+        "updateGameProgression" => true,
+        "transitions" => [
+            "nextPlayer" => ST_START_TURN, 
+            "endGame" => ST_END_GAME,
+        ],
+    ],
    
     // Final state.
-    // Please do not modify (and do not overload action/args methods).
-    99 => array(
+    // Please do not modify.
+    ST_END_GAME => [
         "name" => "gameEnd",
         "description" => clienttranslate("End of game"),
         "type" => "manager",
         "action" => "stGameEnd",
-        "args" => "argGameEnd"
-    )
-
+        "args" => "argGameEnd",
+        "updateGameProgression" => true,
+    ],
 ];
 
+$playerActionsGameStates = [
 
-
+    ST_PLAYER_THROW_DICE => [
+        "name" => "throwDice",
+        "description" => clienttranslate('${actplayer} can reroll dice or resolve dice'),
+        "descriptionmyturn" => clienttranslate('${you} can reroll dice or resolve dice'),
+        "type" => "activeplayer",
+        "action" => "stThrowDice",
+        "args" => "argThrowDice",
+        "possibleactions" => [ "rethrow", "keepDice" ],
+        "transitions" => [
+            "rethrow" => ST_PLAYER_THROW_DICE,
+            "keepDice" => ST_NEXT_PLAYER,
+        ],
+    ],
+];
+ 
+$machinestates = $basicGameStates + $playerActionsGameStates;

@@ -498,6 +498,8 @@ class HighRisk {
     //private base: any;
     constructor(base) {
         this.base = base;
+        //Object.assign(this, base);
+        //console.log(6, this, base);
         //setTimeout(() => this.base = this.base.bgagame.highrisk.prototype, 100);
     }
     /*
@@ -515,8 +517,10 @@ class HighRisk {
     setup(gamedatas) {
         const players = Object.values(gamedatas.players);
         log("Starting game setup");
-        /*this.gamedatas = gamedatas;
-        this.createPlayerPanels(gamedatas);
+        this.gamedatas = gamedatas;
+        //this.base.bgagame.highrisk.superclass.gamedatas = gamedatas;
+        log(gamedatas);
+        /*this.createPlayerPanels(gamedatas);
         this.diceManager = new DiceManager(this, gamedatas.dice);
         this.createVisibleCards(gamedatas.visibleCards, gamedatas.topDeckCardBackType);
         this.createPlayerTables(gamedatas);
@@ -582,12 +586,58 @@ class HighRisk {
     //                        action status bar (ie: the HTML links in the status bar).
     //
     onUpdateActionButtons(stateName, args) {
+        console.log(this, this.isCurrentPlayerActive);
+        if (this.isCurrentPlayerActive()) {
+            //console.log(this.base.bgagame.highrisk.prototype, this.base.bgagame.highrisk.prototype.isCurrentPlayerActive);
+            switch (stateName) {
+                case 'throwDice':
+                    this.addActionButton(`rethrow-button`, _("Rethow [/] dice"), () => this.rethrow());
+                    this.addActionButton(`placeEncampment-button`, _("Keep dice"), () => this.keepDice());
+                    break;
+            }
+        }
     }
     ///////////////////////////////////////////////////
     //// Utility methods
     ///////////////////////////////////////////////////
     getPlayerId() {
+        //console.log(this.base.bgagame.highrisk.superclass);
         return Number(this.player_id);
+    }
+    /*public isCurrentPlayerActive() {
+        return this.base.bgagame.highrisk.prototype.isCurrentPlayerActive();
+    }*/
+    /*private isCurrentPlayerActive() {
+        console.log('getPlayerId()', this.getPlayerId(), this.base);
+        debugger;
+        return this.base.bgagame.highrisk.superclass.isCurrentPlayerActive();
+        //return this.isPlayerActive(this.getPlayerId());
+    }*/
+    isPlayerActive(playerId) {
+        if ("activeplayer" == this.gamedatas.gamestate.type) {
+            console.log(this.gamedatas.gamestate.active_player, playerId);
+            return this.gamedatas.gamestate.active_player == playerId;
+        }
+        else if ("multipleactiveplayer" == this.gamedatas.gamestate.type) {
+            return this.gamedatas.gamestate.multiactive.some(id => id == playerId);
+        }
+    }
+    rethrow() {
+        if (!this.checkAction('rethrow')) {
+            return;
+        }
+        this.takeAction('rethrow');
+    }
+    keepDice() {
+        if (!this.checkAction('keepDice')) {
+            return;
+        }
+        this.takeAction('keepDice');
+    }
+    takeAction(action, data) {
+        data = data || {};
+        data.lock = true;
+        this.ajaxcall(`/highrisk/highrisk/${action}.html`, data, this, () => { });
     }
     ///////////////////////////////////////////////////
     //// Reaction to cometD notifications
@@ -683,14 +733,181 @@ define([
     "ebg/core/gamegui",
     "ebg/counter",
     "ebg/stock"
-], function (dojo, declare) {
-    return declare("bgagame.highrisk", ebg.core.gamegui, {
-        game: new HighRisk(this),
-        constructor: function () { },
-        setup: function (gamedatas) { return this.game.setup(gamedatas); },
-        onEnteringState: function (stateName, args) { return this.game.onEnteringState(stateName, args); },
-        onLeavingState: function (stateName) { return this.game.onLeavingState(stateName); },
-        onUpdateActionButtons: function (stateName, args) { return this.game.onUpdateActionButtons(stateName, args); },
-        //format_string_recursive: function(log, args) { return this.game.format_string_recursive(this, log, args); }, 
-    });
+], function (dojo) {
+    window.bgagame = window.bgagame || {};
+    window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui {
+        //private base: any;
+        constructor() {
+            super();
+        }
+        /*
+            setup:
+    
+            This method must set up the game user interface according to current game situation specified
+            in parameters.
+    
+            The method is called each time the game interface is displayed to a player, ie:
+            _ when the game starts
+            _ when a player refreshes the game page (F5)
+    
+            "gamedatas" argument contains all datas retrieved by your "getAllDatas" PHP method.
+        */
+        setup(gamedatas) {
+            const players = Object.values(gamedatas.players);
+            log("Starting game setup");
+            this.gamedatas = gamedatas;
+            log(gamedatas);
+            /*this.createPlayerPanels(gamedatas);
+            this.diceManager = new DiceManager(this, gamedatas.dice);
+            this.createVisibleCards(gamedatas.visibleCards, gamedatas.topDeckCardBackType);
+            this.createPlayerTables(gamedatas);
+            this.tableManager = new TableManager(this, this.playerTables);
+            // placement of monster must be after TableManager first paint
+            setTimeout(() => this.playerTables.forEach(playerTable => playerTable.initPlacement()), 200);
+            this.setMimicToken(gamedatas.mimickedCard);
+    
+            const playerId = this.getPlayerId();
+            const currentPlayer = players.find(player => Number(player.id) === playerId);
+    
+            if (currentPlayer?.rapidHealing) {
+                this.addRapidHealingButton(currentPlayer.energy, currentPlayer.health >= currentPlayer.maxHealth);
+            }
+            if (currentPlayer?.location > 0) {
+                this.addAutoLeaveUnderButton();
+            }*/
+            //<!--   <script type="module" src="./die.mjs"></script>-->
+            //<script>
+            /*import { Die } from './die.mjs';
+            
+            const die = new Die({
+                id: 'die'
+            });
+            
+            die.roll();*/
+            //let module = await import('./die.mjs');
+            const die = {
+                value: 4,
+                rolled: true,
+            };
+            import(g_gamethemeurl + 'img/die.js').then(dieModule => {
+                const colorDieElem = new dieModule.Die(Object.assign(Object.assign({}, die), { id: 1 }), {
+                    backgroundImage: 'dice.png',
+                    containerId: 'img-die',
+                    img: g_gamethemeurl,
+                });
+                const dottedDieElem = new dieModule.Die(Object.assign(Object.assign({}, die), { id: 2 }), {
+                    color: 'FF0000',
+                    containerId: 'dotted-die',
+                    img: g_gamethemeurl,
+                });
+                //setTimeout(() => colorDieElem.setRolled(true), 2000);
+            });
+            //</script>
+            //console.log(this.base.bgagame.highrisk.prototype.addTooltipHtml);
+            //setTimeout(() => this.base.bgagame.highrisk.prototype.addTooltipHtml('board', 'test'), 200);
+            this.setupNotifications();
+            log("Ending game setup");
+            console.log('format_string_recursive', this.format_string_recursive);
+        }
+        ///////////////////////////////////////////////////
+        //// Game & client states
+        // onEnteringState: this method is called each time we are entering into a new game state.
+        //                  You can use this method to perform some user interface changes at this moment.
+        //
+        onEnteringState(stateName, args) {
+            log('Entering state: ' + stateName, args.args);
+        }
+        onLeavingState(stateName) {
+            log('Leaving state: ' + stateName);
+        }
+        // onUpdateActionButtons: in this method you can manage "action buttons" that are displayed in the
+        //                        action status bar (ie: the HTML links in the status bar).
+        //
+        onUpdateActionButtons(stateName, args) {
+            if (this.isCurrentPlayerActive()) {
+                switch (stateName) {
+                    case 'throwDice':
+                        this.addActionButton(`rethrow-button`, _("Rethow [/] dice"), () => this.rethrow());
+                        this.addActionButton(`placeEncampment-button`, _("Keep dice"), () => this.keepDice());
+                        break;
+                }
+            }
+        }
+        ///////////////////////////////////////////////////
+        //// Utility methods
+        ///////////////////////////////////////////////////
+        getPlayerId() {
+            return Number(this.player_id);
+        }
+        rethrow() {
+            if (!this.checkAction('rethrow')) {
+                return;
+            }
+            this.takeAction('rethrow');
+        }
+        keepDice() {
+            if (!this.checkAction('keepDice')) {
+                return;
+            }
+            this.takeAction('keepDice');
+        }
+        takeAction(action, data) {
+            data = data || {};
+            data.lock = true;
+            this.ajaxcall(`/highrisk/highrisk/${action}.html`, data, this, () => { });
+        }
+        ///////////////////////////////////////////////////
+        //// Reaction to cometD notifications
+        /*
+            setupNotifications:
+    
+            In this method, you associate each of your game notifications with your local method to handle it.
+    
+            Note: game notification names correspond to "notifyAllPlayers" and "notifyPlayer" calls in
+                    your pylos.game.php file.
+    
+        */
+        setupNotifications() {
+            //log( 'notifications subscriptions setup' );
+            const notifs = [
+            /*['pickMonster', 500],
+            ['setInitialCards', 500],
+            ['resolveNumberDice', ANIMATION_MS],
+            ['resolveHealthDice', ANIMATION_MS],
+            ['resolveHealingRay', ANIMATION_MS],
+            ['resolveHealthDiceInTokyo', ANIMATION_MS],
+            ['removeShrinkRayToken', ANIMATION_MS],
+            ['removePoisonToken', ANIMATION_MS],
+            ['resolveEnergyDice', ANIMATION_MS],
+            ['resolveSmashDice', ANIMATION_MS],
+            ['playerEliminated', ANIMATION_MS],
+            ['playerEntersTokyo', ANIMATION_MS],
+            ['renewCards', ANIMATION_MS],
+            ['buyCard', ANIMATION_MS],
+            ['leaveTokyo', ANIMATION_MS],
+            ['useCamouflage', ANIMATION_MS],
+            ['changeDie', ANIMATION_MS],
+            ['rethrow3changeDie', ANIMATION_MS],
+            ['resolvePlayerDice', 500],
+            ['points', 1],
+            ['health', 1],
+            ['energy', 1],
+            ['maxHealth', 1],
+            ['shrinkRayToken', 1],
+            ['poisonToken', 1],
+            ['setCardTokens', 1],
+            ['removeCards', 1],
+            ['setMimicToken', 1],
+            ['removeMimicToken', 1],
+            ['toggleRapidHealing', 1],
+            ['updateLeaveTokyoUnder', 1],
+            ['updateStayTokyoOver', 1],
+            ['kotPlayerEliminated', 1],*/
+            ];
+            notifs.forEach((notif) => {
+                dojo.subscribe(notif[0], this, `notif_${notif[0]}`);
+                this.notifqueue.setSynchronous(notif[0], notif[1]);
+            });
+        }
+    };
 });
