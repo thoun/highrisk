@@ -1,8 +1,13 @@
+const isDebug = window.location.host == 'studio.boardgamearena.com' || window.location.hash.indexOf('debug') > -1;;
+const log = isDebug ? console.log.bind(window.console) : function () { };
+
+declare const g_gamethemeurl;
+declare const define;
+
 define([
     "dojo","dojo/_base/declare",
     "ebg/core/gamegui",
-    "ebg/counter",
-    "ebg/stock"
+    "ebg/counter"
 ],
 function (dojo) {
 
@@ -10,10 +15,14 @@ window.bgagame = window.bgagame || {};
 window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements HighRiskGame {
         private gamedatas: HighRiskGamedatas;
         private diceManager: DiceManager;
-        //private base: any;
     
         constructor() {
             super();
+            
+            (this as any).format_string_recursive = (pLog, pArgs) => {
+                const {log, args} = this.formatStringRecursive(pLog, pArgs);
+                return super.format_string_recursive(log, args);
+            }
         }
         
         /*
@@ -30,7 +39,6 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
         */
     
         public setup(gamedatas: HighRiskGamedatas) {
-    
             const players = Object.values(gamedatas.players);
     
             log( "Starting game setup" );
@@ -97,8 +105,6 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
             this.setupNotifications();
     
             log( "Ending game setup" );
-
-            console.log('format_string_recursive', this.format_string_recursive);
         }
     
         ///////////////////////////////////////////////////
@@ -119,7 +125,7 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
         //                        action status bar (ie: the HTML links in the status bar).
         //
         public onUpdateActionButtons(stateName: string, args: any) {
-            if (this.isCurrentPlayerActive()) {
+            if ((this as any).isCurrentPlayerActive()) {
                 switch (stateName) {
                     case 'throwDice':
                         (this as any).addActionButton(`rethrow-button`, _("Rethow [/] dice"), () => this.rethrow());
@@ -178,8 +184,8 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
             //log( 'notifications subscriptions setup' );
     
             const notifs = [
-                /*['pickMonster', 500],
-                ['setInitialCards', 500],
+                ['reroll', 500],
+               /* ['setInitialCards', 500],
                 ['resolveNumberDice', ANIMATION_MS],
                 ['resolveHealthDice', ANIMATION_MS],
                 ['resolveHealingRay', ANIMATION_MS],
@@ -219,13 +225,13 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
             });
         }
     
-        /*notif_setInitialCards(notif: Notif<NotifSetInitialCardsArgs>) {
-            this.cards.addCardsToStock(this.visibleCards, notif.args.cards, 'deck');
-        }*/
+        notif_reroll(notif: Notif<any>) {
+            console.log(notif.args);
+        }
     
         /* This enable to inject translatable styled things to logs or action bar */
         /* @Override */
-        /*public format_string_recursive(base: any, log: string, args: any) {
+        public formatStringRecursive(log: string, args: any) {
             try {
                 if (log && args && !args.processed) {
                     // Representation of the color of a card
@@ -237,23 +243,23 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
                             types = args.card_name.split(',').map((cardType: string) => Number(cardType));
                         }
                         if (types !== null) {
-                            const names: string[] = types.map((cardType: number) => this.cards.getCardName(cardType, 'text-only'));
-                            args.card_name = `<strong>${names.join(', ')}</strong>`;
+                            //const names: string[] = types.map((cardType: number) => this.cards.getCardName(cardType, 'text-only'));
+                            //args.card_name = `<strong>${names.join(', ')}</strong>`;
                         }
                     }
     
                     for (const property in args) {
                         if (args[property]?.indexOf?.(']') > 0) {
-                            args[property] = formatTextIcons(_(args[property]));
+                            //args[property] = formatTextIcons(_(args[property]));
                         }
                     }
     
-                    log = formatTextIcons(_(log));
+                    //log = formatTextIcons(_(log));
                 }
             } catch (e) {
                 console.error(log,args,"Exception thrown", e.stack);
             }
-            return super.format_string_recursive(arguments);
-        }*/
+            return { log, args };
+        }
     };
 });

@@ -16,6 +16,7 @@ trait ActionTrait {
         
         $playerId = self::getActivePlayerId();
 
+        self::notifyAllPlayers("reroll", "temp notif", []);
         // TODO
 
         $this->gamestate->nextState('rethrow');
