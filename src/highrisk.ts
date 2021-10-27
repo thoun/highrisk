@@ -3,7 +3,9 @@ const log = isDebug ? console.log.bind(window.console) : function () { };
 
 declare const g_gamethemeurl;
 declare const define;
+declare const _;
 
+import(g_gamethemeurl + 'img/die.js').then(dieModule => {
 define([
     "dojo","dojo/_base/declare",
     "ebg/core/gamegui",
@@ -83,7 +85,6 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
                 rolled: true,
             };
     
-            import(g_gamethemeurl + 'img/die.js').then(dieModule => {
                 const colorDieElem = new dieModule.Die({...die, id: 1}, {
                     backgroundImage: 'dice.png',
                     containerId: 'img-die',
@@ -96,7 +97,6 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
                 });
             
                 //setTimeout(() => colorDieElem.setRolled(true), 2000);
-            });
             //</script>
     
             //console.log(this.base.bgagame.highrisk.prototype.addTooltipHtml);
@@ -262,4 +262,5 @@ window.bgagame.highrisk = class HighRisk extends ebg.core.gamegui implements Hig
             return { log, args };
         }
     };
+});
 });
